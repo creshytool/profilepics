@@ -33,18 +33,47 @@ input[type=color]{padding:2px;height:42px}input[type=range]{width:100%;accent-co
 .tb:hover{border-color:var(--accent)}
 .chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}.chk input{width:auto;margin:0}
 .btn{background:var(--accent);color:#fff;border:none;padding:14px;width:100%;font-size:16px;font-weight:700;border-radius:6px;cursor:pointer;margin-top:8px;font-family:inherit}
-.btn:hover{background:var(--accent2)}.btn.s{background:var(--inp);color:var(--text);border:1px solid var(--border);font-size:14px;font-weight:600;padding:11px}
+.btn:hover:not(:disabled){background:var(--accent2)}.btn.s{background:var(--inp);color:var(--text);border:1px solid var(--border);font-size:14px;font-weight:600;padding:11px}
+.btn:disabled{opacity:.5;cursor:default}
 .pv{display:flex;gap:12px;align-items:center}#pv{border:1px solid var(--border);background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0/12px 12px;border-radius:6px}
 #info{font-size:12px;color:var(--muted);line-height:1.5}
 #msg{font-size:12px;min-height:16px;margin-top:8px;color:var(--muted)}
 .sec{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 8px;font-weight:700}
-@media (max-width:820px){.grid{grid-template-columns:1fr}#stage{height:min(calc(100vw - 56px),420px)}.wrap{padding:10px}.tool{padding:14px}}
+/* ---------- Usage limit ---------- */
+.use{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:14px}
+.use [hidden]{display:none!important}
+.ucnt{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:var(--soft);border:1px solid var(--border);color:var(--accent);font-size:12.5px;font-weight:700}
+.ucnt::before{content:"";width:8px;height:8px;border-radius:50%;background:#22c55e}
+.ucnt.low{background:#fff4dc;color:#a15c00;border-color:transparent}.ucnt.low::before{background:#f59e0b}
+.ucnt.out{background:#fee8e8;color:#b42318;border-color:transparent}.ucnt.out::before{background:#ef4444}
+.unudge{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid var(--border);font-size:13px;font-weight:600}
+.unudge a{padding:7px 14px;border-radius:8px;background:linear-gradient(135deg,#7b46ff,#d946ef);color:#fff;text-decoration:none;font-size:12.5px;font-weight:700;white-space:nowrap}
+.ulim{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px 18px;border-radius:14px;background:var(--soft);border:1px solid var(--border)}
+.ulim-t{flex:1 1 280px;min-width:0}
+.ulim-h{font-size:17px;font-weight:800;color:var(--accent)}
+.ulim-p{margin:4px 0 8px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.ulim-c{display:inline-block;padding:6px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);font-size:13.5px;font-weight:700}
+.ulim-c span{color:var(--accent);font-variant-numeric:tabular-nums}
+.ulim-b{display:inline-block;padding:12px 22px;border-radius:10px;background:linear-gradient(135deg,#7b46ff,#d946ef);color:#fff;text-decoration:none;font-size:14.5px;font-weight:800;box-shadow:0 6px 16px rgba(123,70,255,.35);transition:transform .15s,box-shadow .15s;white-space:nowrap}
+.ulim-b:hover,.unudge a:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(123,70,255,.45);color:#fff}
+.locked{opacity:.45;filter:grayscale(.3);pointer-events:none;user-select:none}
+@media (max-width:820px){.grid{grid-template-columns:1fr}#stage{height:min(calc(100vw - 56px),420px)}.wrap{padding:10px}.tool{padding:14px}.ulim-b{width:100%;text-align:center}}
 </style>
 </head>
 <body>
 <div class="wrap"><div class="tool">
 <h1>Profile Picture Cropper</h1>
 <p class="sub">Crop, resize and export profile pictures and banners for any platform. Your image never leaves your device.</p>
+
+<div class="use">
+  <div class="ucnt" id="ucnt">5 of 5 uses remaining</div>
+  <div class="unudge" id="unudge" hidden><span>⚡ Only 1 use left. Go unlimited with the Premium Plan and get 14 days free!</span><a href="https://premium.creshy.com/membership-levels/" target="_blank" rel="noopener">Get 14 days free</a></div>
+  <div class="ulim" id="ulim" hidden>
+    <div class="ulim-t"><div class="ulim-h">You've reached your usage limit</div><p class="ulim-p">Upgrade to the Premium Plan and enjoy unlimited access with no waiting. Use the tool as much as you want, anytime. Get 14 days free!</p><div class="ulim-c">Ready again in <span id="ucd">0h 00m 00s</span></div></div>
+    <a class="ulim-b" href="https://premium.creshy.com/membership-levels/" target="_blank" rel="noopener">🚀 Get 14 Days Free</a>
+  </div>
+</div>
+
 <div id="drop"><strong>Click to upload an image</strong>, drag &amp; drop, or paste (Ctrl+V)<input type="file" id="file" accept="image/*" hidden></div>
 
 <div class="grid hide" id="main">
@@ -109,6 +138,27 @@ input[type=color]{padding:2px;height:42px}input[type=range]{width:100%;accent-co
 
 <script>
 const $=id=>document.getElementById(id);
+
+/* ---------- usage limit ---------- */
+const LIMIT=5,SPAN=2*60*60*1000,UK="pfp_usage1";let memU=[],locked=false;
+function readU(){let a=null;const n=Date.now();
+  try{a=JSON.parse(localStorage.getItem(UK))}catch(e){a=null}
+  if(!Array.isArray(a))a=memU;
+  a=a.filter(t=>typeof t==="number"&&isFinite(t)&&t>n-SPAN&&t<=n+60000).sort((x,y)=>x-y);memU=a;return a}
+function writeU(a){memU=a;try{localStorage.setItem(UK,JSON.stringify(a))}catch(e){}}
+function fmtT(ms){const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),r=s%60;return h+"h "+(m<10?"0":"")+m+"m "+(r<10?"0":"")+r+"s"}
+function useUI(){
+  const a=readU(),left=Math.max(0,LIMIT-a.length),out=left===0,cnt=$("ucnt");
+  cnt.textContent=left+" of "+LIMIT+" uses remaining";cnt.className="ucnt"+(left===1?" low":out?" out":"");
+  $("unudge").hidden=left!==1;$("ulim").hidden=!out;
+  if(out)$("ucd").textContent=fmtT(a[0]+SPAN-Date.now());
+  if(out!==locked){locked=out;
+    ["drop","main"].forEach(id=>{const b=$(id);b.classList.toggle("locked",locked);if(locked)b.setAttribute("inert","");else b.removeAttribute("inert")});
+    $("dl").disabled=locked;$("cp").disabled=locked;}}
+function recordUse(){const a=readU();a.push(Date.now());writeU(a);useUI()}
+function limitHit(){return readU().length>=LIMIT}
+function limited(){if(locked||limitHit()){useUI();msg("You've reached your usage limit.",1);return true}return false}
+
 const S={img:null,name:"image",rot:0,fx:1,fy:1,zoom:1,ox:0,oy:0,url:null};
 const cv=$("cv"),ctx=cv.getContext("2d"),pvc=$("pv"),pvx=pvc.getContext("2d");
 const FILT="filter" in CanvasRenderingContext2D.prototype;
@@ -178,6 +228,7 @@ function exportCanvas(){
 }
 
 function load(file){
+  if(locked)return;
   if(!file||!file.type.startsWith("image/")){msg("Please choose an image file.",1);return}
   if(S.url)URL.revokeObjectURL(S.url);
   S.url=URL.createObjectURL(file);const im=new Image();
@@ -191,7 +242,7 @@ $("file").onchange=e=>load(e.target.files[0]);
 ["dragover","dragenter"].forEach(e=>$("drop").addEventListener(e,ev=>{ev.preventDefault();$("drop").classList.add("over")}));
 ["dragleave","drop"].forEach(e=>$("drop").addEventListener(e,ev=>{ev.preventDefault();$("drop").classList.remove("over")}));
 $("drop").addEventListener("drop",ev=>load(ev.dataTransfer.files[0]));
-document.addEventListener("paste",e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith("image/"));if(it)load(it.getAsFile())});
+document.addEventListener("paste",e=>{if(locked)return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith("image/"));if(it)load(it.getAsFile())});
 
 $("preset").onchange=function(){const[w,h]=this.value.split("x");$("tw").value=w;$("th").value=h;S.ox=S.oy=0;render()};
 ["tw","th"].forEach(i=>$(i).addEventListener("input",()=>{if(S.img){$("preset").selectedIndex=0;render()}}));
@@ -219,18 +270,21 @@ window.addEventListener("resize",()=>{if(S.img)resize()});
 
 $("dl").onclick=()=>{
   if(!S.img){msg("Upload an image first.",1);return}
+  if(limited())return;
   const c=exportCanvas(),fmt=$("fmt").value,ext={"image/png":"png","image/jpeg":"jpg","image/webp":"webp"}[fmt];
   c.toBlob(b=>{
     if(!b){msg("Export failed. Try a smaller size or another format.",1);return}
     const u=URL.createObjectURL(b),a=document.createElement("a");
     a.href=u;a.download=`${S.name}-${c.width}x${c.height}.${ext}`;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(u),1500);msg("Downloaded "+a.download+" ("+(b.size/1024).toFixed(1)+" KB)");
+    setTimeout(()=>URL.revokeObjectURL(u),1500);recordUse();msg("Downloaded "+a.download+" ("+(b.size/1024).toFixed(1)+" KB)");
   },fmt,+$("q").value/100);
 };
 $("cp").onclick=()=>{
   if(!S.img){msg("Upload an image first.",1);return}
-  exportCanvas().toBlob(async b=>{try{await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);msg("Image copied to clipboard.")}catch(e){msg("Copy is not supported here. Use Download instead.",1)}},"image/png");
+  if(limited())return;
+  exportCanvas().toBlob(async b=>{try{await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);recordUse();msg("Image copied to clipboard.")}catch(e){msg("Copy is not supported here. Use Download instead.",1)}},"image/png");
 };
+useUI();setInterval(useUI,1000);
 </script>
 </body>
 </html>
